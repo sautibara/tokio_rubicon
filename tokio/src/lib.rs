@@ -705,3 +705,6 @@ fn is_unpin<T: Unpin>() {}
 /// fuzz test (`fuzz_linked_list`)
 #[cfg(fuzzing)]
 pub mod fuzz;
+
+#[doc(hidden)]
+pub use rubicon;

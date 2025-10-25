@@ -1,0 +1,6 @@
+[submodule "parking_lot_rubicon"]
+	path = parking_lot_rubicon
+	url = git@github.com:sautibara/parking_lot_rubicon.git
+[submodule "tracing_rubicon"]
+	path = tracing_rubicon
+	url = git@github.com:sautibara/tracing_rubicon.git

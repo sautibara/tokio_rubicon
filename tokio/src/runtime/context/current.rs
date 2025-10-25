@@ -1,4 +1,4 @@
-use super::{Context, CONTEXT};
+use super::{Context, TOKIO_RT_CONTEXT};
 
 use crate::runtime::{scheduler, TryCurrentError};
 use crate::util::markers::SyncNotSend;
@@ -31,14 +31,16 @@ pub(super) struct HandleCell {
 ///
 /// [`Handle`]: crate::runtime::scheduler::Handle
 pub(crate) fn try_set_current(handle: &scheduler::Handle) -> Option<SetCurrentGuard> {
-    CONTEXT.try_with(|ctx| ctx.set_current(handle)).ok()
+    TOKIO_RT_CONTEXT
+        .try_with(|ctx| ctx.set_current(handle))
+        .ok()
 }
 
 pub(crate) fn with_current<F, R>(f: F) -> Result<R, TryCurrentError>
 where
     F: FnOnce(&scheduler::Handle) -> R,
 {
-    match CONTEXT.try_with(|ctx| ctx.current.handle.borrow().as_ref().map(f)) {
+    match TOKIO_RT_CONTEXT.try_with(|ctx| ctx.current.handle.borrow().as_ref().map(f)) {
         Ok(Some(ret)) => Ok(ret),
         Ok(None) => Err(TryCurrentError::new_no_context()),
         Err(_access_error) => Err(TryCurrentError::new_thread_local_destroyed()),
@@ -74,7 +76,7 @@ impl HandleCell {
 
 impl Drop for SetCurrentGuard {
     fn drop(&mut self) {
-        CONTEXT.with(|ctx| {
+        TOKIO_RT_CONTEXT.with(|ctx| {
             let depth = ctx.current.depth.get();
 
             if depth != self.depth {

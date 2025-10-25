@@ -30,3 +30,7 @@ unexpected_cfgs = { level = "warn", check-cfg = [
   'cfg(tokio_unstable)',
   'cfg(target_os, values("cygwin"))',
 ] }
+
+[patch.crates-io]
+tracing = { path = "tracing_rubicon/tracing" }
+parking_lot = { path = "parking_lot_rubicon"}

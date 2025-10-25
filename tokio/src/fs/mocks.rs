@@ -107,7 +107,7 @@ impl From<MockFile> for OwnedFd {
 }
 
 tokio_thread_local! {
-    static QUEUE: RefCell<VecDeque<Box<dyn FnOnce() + Send>>> = RefCell::new(VecDeque::new())
+    static TOKIO_FS_MOCKS_QUEUE: RefCell<VecDeque<Box<dyn FnOnce() + Send>>> = RefCell::new(VecDeque::new())
 }
 
 #[derive(Debug)]
@@ -125,7 +125,7 @@ where
         let _ = tx.send(f());
     });
 
-    QUEUE.with(|cell| cell.borrow_mut().push_back(task));
+    TOKIO_FS_MOCKS_QUEUE.with(|cell| cell.borrow_mut().push_back(task));
 
     JoinHandle { rx }
 }
@@ -140,7 +140,7 @@ where
         let _ = tx.send(f());
     });
 
-    QUEUE.with(|cell| cell.borrow_mut().push_back(task));
+    TOKIO_FS_MOCKS_QUEUE.with(|cell| cell.borrow_mut().push_back(task));
 
     Some(JoinHandle { rx })
 }
@@ -163,11 +163,11 @@ pub(super) mod pool {
     use super::*;
 
     pub(in super::super) fn len() -> usize {
-        QUEUE.with(|cell| cell.borrow().len())
+        TOKIO_FS_MOCKS_QUEUE.with(|cell| cell.borrow().len())
     }
 
     pub(in super::super) fn run_one() {
-        let task = QUEUE
+        let task = TOKIO_FS_MOCKS_QUEUE
             .with(|cell| cell.borrow_mut().pop_front())
             .expect("expected task to run, but none ready");
 

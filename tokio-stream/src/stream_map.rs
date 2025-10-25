@@ -738,11 +738,13 @@ mod rand {
             use std::sync::atomic::AtomicU32;
             use std::sync::atomic::Ordering::Relaxed;
 
-            static COUNTER: AtomicU32 = AtomicU32::new(1);
+            rubicon::process_local! {
+                static TOKIO_STREAM_MAP_RAND_COUNTER: AtomicU32 = AtomicU32::new(1);
+            }
 
             pub(crate) fn seed() -> u64 {
                 // Hash some unique-ish data to generate some new state
-                RandomState::new().hash_one(COUNTER.fetch_add(1, Relaxed))
+                RandomState::new().hash_one(TOKIO_STREAM_MAP_RAND_COUNTER.fetch_add(1, Relaxed))
             }
         }
 
@@ -807,10 +809,10 @@ mod rand {
 
     // Used by `StreamMap`
     pub(crate) fn thread_rng_n(n: u32) -> u32 {
-        thread_local! {
-            static THREAD_RNG: FastRand = FastRand::new(loom::rand::seed());
+        rubicon::thread_local! {
+            static TOKIO_STREAM_MAP_THREAD_RNG: FastRand = FastRand::new(loom::rand::seed());
         }
 
-        THREAD_RNG.with(|rng| rng.fastrand_n(n))
+        TOKIO_STREAM_MAP_THREAD_RNG.with(|rng| rng.fastrand_n(n))
     }
 }

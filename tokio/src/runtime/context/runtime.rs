@@ -1,4 +1,4 @@
-use super::{BlockingRegionGuard, SetCurrentGuard, CONTEXT};
+use super::{BlockingRegionGuard, SetCurrentGuard, TOKIO_RT_CONTEXT};
 
 use crate::runtime::scheduler;
 use crate::util::rand::{FastRand, RngSeed};
@@ -36,7 +36,7 @@ pub(crate) fn enter_runtime<F, R>(handle: &scheduler::Handle, allow_block_in_pla
 where
     F: FnOnce(&mut BlockingRegionGuard) -> R,
 {
-    let maybe_guard = CONTEXT.with(|c| {
+    let maybe_guard = TOKIO_RT_CONTEXT.with(|c| {
         if c.runtime.get().is_entered() {
             None
         } else {
@@ -81,7 +81,7 @@ impl fmt::Debug for EnterRuntimeGuard {
 
 impl Drop for EnterRuntimeGuard {
     fn drop(&mut self) {
-        CONTEXT.with(|c| {
+        TOKIO_RT_CONTEXT.with(|c| {
             assert!(c.runtime.get().is_entered());
             c.runtime.set(EnterRuntime::NotEntered);
             // Replace the previous RNG seed

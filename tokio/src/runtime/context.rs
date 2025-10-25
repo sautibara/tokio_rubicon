@@ -75,7 +75,7 @@ struct Context {
 }
 
 tokio_thread_local! {
-    static CONTEXT: Context = const {
+    static TOKIO_RT_CONTEXT: Context = const {
         Context {
             #[cfg(feature = "rt")]
             thread_id: Cell::new(None),
@@ -123,7 +123,7 @@ tokio_thread_local! {
 
 #[cfg(any(feature = "macros", all(feature = "sync", feature = "rt")))]
 pub(crate) fn thread_rng_n(n: u32) -> u32 {
-    CONTEXT.with(|ctx| {
+    TOKIO_RT_CONTEXT.with(|ctx| {
         let mut rng = ctx.rng.get().unwrap_or_else(FastRand::new);
         let ret = rng.fastrand_n(n);
         ctx.rng.set(Some(rng));
@@ -132,14 +132,14 @@ pub(crate) fn thread_rng_n(n: u32) -> u32 {
 }
 
 pub(crate) fn budget<R>(f: impl FnOnce(&Cell<coop::Budget>) -> R) -> Result<R, AccessError> {
-    CONTEXT.try_with(|ctx| f(&ctx.budget))
+    TOKIO_RT_CONTEXT.try_with(|ctx| f(&ctx.budget))
 }
 
 cfg_rt! {
     use crate::runtime::ThreadId;
 
     pub(crate) fn thread_id() -> Result<ThreadId, AccessError> {
-        CONTEXT.try_with(|ctx| {
+        TOKIO_RT_CONTEXT.try_with(|ctx| {
             match ctx.thread_id.get() {
                 Some(id) => id,
                 None => {
@@ -152,11 +152,11 @@ cfg_rt! {
     }
 
     pub(crate) fn set_current_task_id(id: Option<Id>) -> Option<Id> {
-        CONTEXT.try_with(|ctx| ctx.current_task_id.replace(id)).unwrap_or(None)
+        TOKIO_RT_CONTEXT.try_with(|ctx| ctx.current_task_id.replace(id)).unwrap_or(None)
     }
 
     pub(crate) fn current_task_id() -> Option<Id> {
-        CONTEXT.try_with(|ctx| ctx.current_task_id.get()).unwrap_or(None)
+        TOKIO_RT_CONTEXT.try_with(|ctx| ctx.current_task_id.get()).unwrap_or(None)
     }
 
     #[track_caller]
@@ -173,13 +173,13 @@ cfg_rt! {
     }
 
     pub(super) fn set_scheduler<R>(v: &scheduler::Context, f: impl FnOnce() -> R) -> R {
-        CONTEXT.with(|c| c.scheduler.set(v, f))
+        TOKIO_RT_CONTEXT.with(|c| c.scheduler.set(v, f))
     }
 
     #[track_caller]
     pub(super) fn with_scheduler<R>(f: impl FnOnce(Option<&scheduler::Context>) -> R) -> R {
         let mut f = Some(f);
-        CONTEXT.try_with(|c| {
+        TOKIO_RT_CONTEXT.try_with(|c| {
             let f = f.take().unwrap();
             if matches!(c.runtime.get(), EnterRuntime::Entered { .. }) {
                 c.scheduler.with(f)
@@ -194,7 +194,7 @@ cfg_rt! {
         /// SAFETY: Callers of this function must ensure that trace frames always
         /// form a valid linked list.
         pub(crate) unsafe fn with_trace<R>(f: impl FnOnce(&trace::Context) -> R) -> Option<R> {
-            CONTEXT.try_with(|c| f(&c.trace)).ok()
+            TOKIO_RT_CONTEXT.try_with(|c| f(&c.trace)).ok()
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::{EnterRuntime, CONTEXT};
+use super::{EnterRuntime, TOKIO_RT_CONTEXT};
 
 use crate::loom::thread::AccessError;
 use crate::util::markers::NotSendOrSync;
@@ -15,7 +15,7 @@ pub(crate) struct BlockingRegionGuard {
 pub(crate) struct DisallowBlockInPlaceGuard(bool);
 
 pub(crate) fn try_enter_blocking_region() -> Option<BlockingRegionGuard> {
-    CONTEXT
+    TOKIO_RT_CONTEXT
         .try_with(|c| {
             if c.runtime.get().is_entered() {
                 None
@@ -32,7 +32,7 @@ pub(crate) fn try_enter_blocking_region() -> Option<BlockingRegionGuard> {
 
 /// Disallows blocking in the current runtime context until the guard is dropped.
 pub(crate) fn disallow_block_in_place() -> DisallowBlockInPlaceGuard {
-    let reset = CONTEXT.try_with(|c| {
+    let reset = TOKIO_RT_CONTEXT.try_with(|c| {
         if let EnterRuntime::Entered {
             allow_block_in_place: true,
         } = c.runtime.get()
@@ -106,7 +106,7 @@ impl Drop for DisallowBlockInPlaceGuard {
     fn drop(&mut self) {
         if self.0 {
             // XXX: Do we want some kind of assertion here, or is "best effort" okay?
-            CONTEXT.with(|c| {
+            TOKIO_RT_CONTEXT.with(|c| {
                 if let EnterRuntime::Entered {
                     allow_block_in_place: false,
                 } = c.runtime.get()

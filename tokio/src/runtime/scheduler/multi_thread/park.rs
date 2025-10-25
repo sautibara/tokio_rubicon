@@ -11,7 +11,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::time::Duration;
 
 #[cfg(loom)]
-use crate::runtime::park::CURRENT_THREAD_PARK_COUNT;
+use crate::runtime::park::TOKIO_RT_CURRENT_THREAD_PARK_COUNT;
 
 pub(crate) struct Parker {
     inner: Arc<Inner>,
@@ -82,7 +82,7 @@ impl Parker {
             // `park_timeout`, but we still have to increment the counter if we can't acquire the
             // lock.
             #[cfg(loom)]
-            CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
+            TOKIO_RT_CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
         }
     }
 

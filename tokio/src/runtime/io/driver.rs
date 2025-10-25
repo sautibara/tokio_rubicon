@@ -207,7 +207,7 @@ impl Driver {
                 self.signal_ready = true;
             } else {
                 let ready = Ready::from_mio(event);
-                let ptr = super::EXPOSE_IO.from_exposed_addr(token.0);
+                let ptr = super::TOKIO_RT_EXPOSE_IO.from_exposed_addr(token.0);
 
                 // Safety: we ensure that the pointers used as tokens are not freed
                 // until they are both deregistered from mio **and** we know the I/O

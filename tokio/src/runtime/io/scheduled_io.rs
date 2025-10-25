@@ -187,7 +187,7 @@ impl Default for ScheduledIo {
 
 impl ScheduledIo {
     pub(crate) fn token(&self) -> mio::Token {
-        mio::Token(super::EXPOSE_IO.expose_provenance(self))
+        mio::Token(super::TOKIO_RT_EXPOSE_IO.expose_provenance(self))
     }
 
     /// Invoked when the IO driver is shut down; forces this `ScheduledIo` into a

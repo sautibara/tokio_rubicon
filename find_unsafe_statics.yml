@@ -1,0 +1,32 @@
+language: Rust
+id: find-unsafe-statics
+rule:
+  any:
+    - kind: static_item
+    - kind: macro_invocation
+      any:
+        - has:
+            kind: identifier
+            pattern: thread_local
+        - has:
+            kind: scoped_identifier
+            regex: "std::thread_local"
+    - kind: macro_invocation
+      all:
+        - has:
+            kind: identifier
+            pattern: tokio_thread_local
+        - not:
+            has:
+              kind: token_tree
+              regex: "TOKIO_"
+  not:
+    inside:
+      kind: mod_item
+      has:
+        kind: identifier
+        any:
+          - pattern: tests
+          - pattern: test
+          - pattern: test_util
+      stopBy: end

@@ -19,4 +19,6 @@ mod metrics;
 use metrics::IoDriverMetrics;
 
 use crate::util::ptr_expose::PtrExposeDomain;
-static EXPOSE_IO: PtrExposeDomain<ScheduledIo> = PtrExposeDomain::new();
+rubicon::process_local! {
+    static TOKIO_RT_EXPOSE_IO: PtrExposeDomain<ScheduledIo> = PtrExposeDomain::new();
+}

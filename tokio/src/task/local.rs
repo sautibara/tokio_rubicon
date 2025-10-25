@@ -285,7 +285,7 @@ pin_project! {
     }
 }
 
-tokio_thread_local!(static CURRENT: LocalData = const { LocalData {
+tokio_thread_local!(static TOKIO_TASK_CURRENT: LocalData = const { LocalData {
     ctx: RcCell::new(),
     wake_on_schedule: Cell::new(false),
 } });
@@ -446,7 +446,7 @@ cfg_rt! {
                 // safety: we have verified that this is a `LocalRuntime` owned by the current thread
                 unsafe { handle.spawn_local(task, id, meta.spawned_at) }
             } else {
-                match CURRENT.with(|LocalData { ctx, .. }| ctx.get()) {
+                match TOKIO_TASK_CURRENT.with(|LocalData { ctx, .. }| ctx.get()) {
                     None => panic!("`spawn_local` called from outside of a `task::LocalSet` or `runtime::LocalRuntime`"),
                     Some(cx) => cx.spawn(future.take().unwrap(), meta)
                 }
@@ -456,7 +456,7 @@ cfg_rt! {
         match res {
             Ok(None) => panic!("Local tasks can only be spawned on a LocalRuntime from the thread the runtime was created on"),
             Ok(Some(join_handle)) => join_handle,
-            Err(_) => match CURRENT.with(|LocalData { ctx, .. }| ctx.get()) {
+            Err(_) => match TOKIO_TASK_CURRENT.with(|LocalData { ctx, .. }| ctx.get()) {
                 None => panic!("`spawn_local` called from outside of a `task::LocalSet` or `runtime::LocalRuntime`"),
                 Some(cx) => cx.spawn(future.unwrap(), meta)
             }
@@ -485,7 +485,7 @@ pub struct LocalEnterGuard {
 
 impl Drop for LocalEnterGuard {
     fn drop(&mut self) {
-        CURRENT.with(
+        TOKIO_TASK_CURRENT.with(
             |LocalData {
                  ctx,
                  wake_on_schedule,
@@ -535,7 +535,7 @@ impl LocalSet {
     ///
     /// [`spawn_local`]: fn@crate::task::spawn_local
     pub fn enter(&self) -> LocalEnterGuard {
-        CURRENT.with(
+        TOKIO_TASK_CURRENT.with(
             |LocalData {
                  ctx,
                  wake_on_schedule,
@@ -823,7 +823,7 @@ impl LocalSet {
     }
 
     fn with<T>(&self, f: impl FnOnce() -> T) -> T {
-        CURRENT.with(|local_data| {
+        TOKIO_TASK_CURRENT.with(|local_data| {
             let _guard = local_data.enter(self.context.clone());
             f()
         })
@@ -834,7 +834,7 @@ impl LocalSet {
     fn with_if_possible<T>(&self, f: impl FnOnce() -> T) -> T {
         let mut f = Some(f);
 
-        let res = CURRENT.try_with(|local_data| {
+        let res = TOKIO_TASK_CURRENT.try_with(|local_data| {
             let _guard = local_data.enter(self.context.clone());
             (f.take().unwrap())()
         });
@@ -1097,7 +1097,7 @@ impl<T: Future> Future for RunUntil<'_, T> {
 impl Shared {
     /// Schedule the provided task on the scheduler.
     fn schedule(&self, task: task::Notified<Arc<Self>>) {
-        CURRENT.with(|localdata| {
+        TOKIO_TASK_CURRENT.with(|localdata| {
             match localdata.ctx.get() {
                 // If the current `LocalSet` is being polled, we don't need to wake it.
                 // When we `enter` it, then the value `wake_on_schedule` is set to be true.
@@ -1177,7 +1177,7 @@ impl task::Schedule for Arc<Shared> {
                     // This hook is only called from within the runtime, so
                     // `CURRENT` should match with `&self`, i.e. there is no
                     // opportunity for a nested scheduler to be called.
-                    CURRENT.with(|LocalData { ctx, .. }| match ctx.get() {
+                    TOKIO_TASK_CURRENT.with(|LocalData { ctx, .. }| match ctx.get() {
                         Some(cx) if Arc::ptr_eq(self, &cx.shared) => {
                             cx.unhandled_panic.set(true);
                             // Safety: this is always called from the thread that owns `LocalSet`

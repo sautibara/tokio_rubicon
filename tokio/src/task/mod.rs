@@ -333,3 +333,5 @@ cfg_rt! {
 cfg_not_rt! {
     pub(crate) mod coop;
 }
+
+pub use rubicon;

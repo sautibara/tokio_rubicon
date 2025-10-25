@@ -35,12 +35,14 @@ pub(crate) mod rand {
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::Ordering::Relaxed;
 
-    static COUNTER: AtomicU32 = AtomicU32::new(1);
+    rubicon::process_local! {
+        static TOKIO_LOOM_RAND_COUNTER: AtomicU32 = AtomicU32::new(1);
+    }
 
     pub(crate) fn seed() -> u64 {
         let rand_state = RandomState::new();
         // Hash some unique-ish data to generate some new state
-        rand_state.hash_one(COUNTER.fetch_add(1, Relaxed))
+        rand_state.hash_one(TOKIO_LOOM_RAND_COUNTER.fetch_add(1, Relaxed))
     }
 }
 

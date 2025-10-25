@@ -29,13 +29,13 @@ const PARKED: usize = 1;
 const NOTIFIED: usize = 2;
 
 tokio_thread_local! {
-    static CURRENT_PARKER: ParkThread = ParkThread::new();
+    static TOKIO_RT_CURRENT_PARKER: ParkThread = ParkThread::new();
 }
 
 // Bit of a hack, but it is only for loom
 #[cfg(loom)]
 tokio_thread_local! {
-    pub(crate) static CURRENT_THREAD_PARK_COUNT: AtomicUsize = AtomicUsize::new(0);
+    pub(crate) static TOKIO_RT_CURRENT_THREAD_PARK_COUNT: AtomicUsize = AtomicUsize::new(0);
 }
 
 // ==== impl ParkThread ====
@@ -58,13 +58,13 @@ impl ParkThread {
 
     pub(crate) fn park(&mut self) {
         #[cfg(loom)]
-        CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
+        TOKIO_RT_CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
         self.inner.park();
     }
 
     pub(crate) fn park_timeout(&mut self, duration: Duration) {
         #[cfg(loom)]
-        CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
+        TOKIO_RT_CURRENT_THREAD_PARK_COUNT.with(|count| count.fetch_add(1, SeqCst));
         self.inner.park_timeout(duration);
     }
 
@@ -268,7 +268,7 @@ impl CachedParkThread {
     where
         F: FnOnce(&ParkThread) -> R,
     {
-        CURRENT_PARKER.try_with(|inner| f(inner))
+        TOKIO_RT_CURRENT_PARKER.try_with(|inner| f(inner))
     }
 
     pub(crate) fn block_on<F: Future>(&mut self, f: F) -> Result<F::Output, AccessError> {
@@ -338,5 +338,5 @@ unsafe fn wake_by_ref(raw: *const ()) {
 
 #[cfg(loom)]
 pub(crate) fn current_thread_park_count() -> usize {
-    CURRENT_THREAD_PARK_COUNT.with(|count| count.load(SeqCst))
+    TOKIO_RT_CURRENT_THREAD_PARK_COUNT.with(|count| count.load(SeqCst))
 }
